@@ -1,0 +1,22 @@
+<launch>
+    <node pkg="bayesian_grasp_planner" name="bayesian_grasp_planner_node" 
+     type="bayesian_grasp_planner_node"  respawn="false" output="screen">
+
+        <param name="load_model_srv" value="graspitplannerinstance/load_database_model"/>
+    	<param name="test_grasp_srv" value="graspitplannerinstance/test_grasp"/>
+    	<param name="clear_models_srv" value="graspitplannerinstance/clear_bodies"/>
+
+    	<param name="test_cluster_grasp_srv" value="/evaluate_point_cluster_grasps"/>
+
+    	<!-- Computer types: graspit: 1, regression: 2-->
+    	<param name="db_computer_type" value="2"/>
+    	
+    	<!-- Computer types: cluster explicit: 1, regression: 2-->
+    	<param name="cluster_computer_type" value="1"/>
+
+        <!-- Returned grasp thresholds -->
+        <param name="initial_probability_threshold" value="0.01"/>
+        <param name="quantity_threshold" value="100"/>
+        
+    </node>
+</launch>

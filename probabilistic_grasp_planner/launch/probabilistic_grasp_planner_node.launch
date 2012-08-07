@@ -1,0 +1,37 @@
+<launch>
+    <!-- start the database wrapper node -->
+    <node pkg="probabilistic_grasp_planner" name="probabilistic_grasp_planner_node" 
+     type="probabilistic_grasp_planner_node"  respawn="false" output="screen">
+
+        <!-- Show the grasps that are output from the planner-->
+        <param name="show_grasps" value="true"/>
+	
+        <param name="load_model_srv" value="graspitplannerinstance/load_database_model"/>
+    	<param name="test_grasp_srv" value="graspitplannerinstance/test_grasp"/>
+    	<param name="clear_models_srv" value="graspitplannerinstance/clear_bodies"/>
+
+    	<param name="test_cluster_grasp_srv" value="/evaluate_point_cluster_grasps"/>
+    	<param name="graspit_computer_robust_service_name" value="/graspitplannerinstance/test_grasp"/>
+
+    	<!-- Computer types: simple: 0, graspit: 1, regression: 2, position robust: 3 graspit_robust: 4-->
+    	<param name="db_computer_type" value="2"/>
+    	<param name="db_regression_position_sigma" value="0.01"/>
+    	<param name="db_regression_orientation_concentration" value="10.0"/>
+    	<param name="db_max_energy_threshold" value="100"/>
+    	
+    	<!-- Computer types: simple: 0, cluster: 1, regression: 2-->
+    	<param name="use_cluster" value="true"/>
+    	<param name="cluster_computer_type" value="2"/>
+    	<param name="cluster_regression_position_sigma" value="0.01"/>
+        <param name="cluster_regression_orientation_concentration" value="3.0"/>
+        
+        <!-- Initial thresholds -->
+        <param name="initial_probability_threshold" value="0.4"/>
+        <param name="quantity_threshold" value="100"/>
+        
+        <!-- 2-pass options -->
+        <param name="two_pass" value="false"/>
+        <param name="final_probability_threshold" value="0.0"/>
+        
+    </node>
+</launch>

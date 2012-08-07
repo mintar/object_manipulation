@@ -1,0 +1,16 @@
+<package>
+  <description brief="static_transform_broadcaster">
+
+     static_transform_broadcaster
+
+  </description>
+  <author>Matei Ciocarlie</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/static_transform_broadcaster</url>
+  <depend package="tf"/>
+  <depend package="geometry_msgs"/>
+
+</package>
+
+

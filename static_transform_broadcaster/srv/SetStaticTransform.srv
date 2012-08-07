@@ -1,0 +1,10 @@
+# adds or modifies a transform to the static transform broadcaster
+# if an older tranforms already exists with the same child_frame_id
+# it will be replaced by this one
+
+# the new static transform
+geometry_msgs/TransformStamped transform
+
+---
+
+# no feedback

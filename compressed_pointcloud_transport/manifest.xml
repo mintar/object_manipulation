@@ -1,0 +1,18 @@
+<package>
+  <description brief="compressed_pointcloud_transport">
+
+     compressed_pointcloud_transport
+
+  </description>
+  <author></author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/compressed_pointcloud_transport</url>
+  <depend package="roscpp"/>
+  <depend package="pcl"/>
+  <depend package="std_msgs"/>
+  <depend package="sensor_msgs"/>
+  <depend package="common_rosdeps" />
+</package>
+
+

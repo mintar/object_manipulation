@@ -1,0 +1,21 @@
+<package>
+  <description brief="bayesian_grasp_planner">
+
+     bayesian_grasp_planner
+
+  </description>
+  <author>Kaijen Hsiao and Matei Ciocarlie</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/bayesian_grasp_planner</url>
+
+  <depend package="roscpp" />
+  <depend package="actionlib" />
+  <depend package="object_manipulation_msgs" />
+  <depend package="household_objects_database_msgs" />
+  <depend package="household_objects_database" />
+  <depend package="object_manipulator" />
+
+</package>
+
+

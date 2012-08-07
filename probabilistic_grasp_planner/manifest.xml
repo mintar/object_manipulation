@@ -1,0 +1,23 @@
+<package>
+  <description brief="probabilistic_grasp_planner">
+    Takes potentially found models and clusters in a scene, and plans
+    grasps which are robust to positioning and model uncertainty.
+  </description>
+  <author>Peter Brook</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/probabilistic_grasp_planner</url>
+
+  <depend package="std_msgs"/>
+  <depend package="visualization_msgs"/>
+  <depend package="geometry_msgs"/>
+  <depend package="sensor_msgs"/>
+  <depend package="household_objects_database"/>
+  <depend package="household_objects_database_msgs"/>
+  <depend package="object_manipulator"/>
+  <depend package="object_manipulation_msgs"/>
+  <depend package="common_rosdeps" /> 
+  <!--depend package="profiling"/-->
+</package>
+
+

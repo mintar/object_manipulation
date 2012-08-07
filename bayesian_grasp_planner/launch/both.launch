@@ -1,0 +1,4 @@
+<launch>
+    <include file="$(find bayesian_grasp_planner)/launch/bayesian_grasp_planner_node_prereqs.launch"/>
+    <include file="$(find bayesian_grasp_planner)/launch/bayesian_grasp_planner_node.launch"/>
+</launch>

@@ -1,0 +1,16 @@
+<launch>
+	<!-- load the database parameters -->
+    <rosparam command="load" file="$(find household_objects_database)/config/wgs36.yaml"/>
+    
+    <!-- We need hand descriptions to make sense of grasps in the db -->
+    <rosparam command="load" file="$(find pr2_object_manipulation_launch)/config/pr2_hand_descriptions.yaml"/>
+    
+    <!-- OBJECT SOURCES -->
+
+    <!-- cluster grasp planner-->
+    <node name="pr2_gripper_grasp_planner_cluster" pkg="pr2_gripper_grasp_planner_cluster" 
+        type="pr2_gripper_grasp_planner_cluster_server.py" respawn="false" output="screen"/>
+    <!-- cluster bounding box finder (required for cluster grasp planner)--> 
+    <node name="cluster_bounding_box_finder" pkg="object_manipulator"
+        type="cluster_bounding_box_finder_server.py" output="screen" respawn="false" />
+</launch>

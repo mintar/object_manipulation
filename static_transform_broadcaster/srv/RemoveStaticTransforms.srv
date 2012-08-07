@@ -1,0 +1,13 @@
+# removes static transforms (identified by the child_frame_id) from the 
+# static transform broadcaster
+
+# if all transforms should be removed
+bool remove_all_transforms
+
+# the child frame ids of the transforms to be removed
+# only used if remove_all_transforms is false
+string[] child_frame_ids
+
+---
+
+# no reply

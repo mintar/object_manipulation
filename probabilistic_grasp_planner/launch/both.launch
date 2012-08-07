@@ -1,0 +1,4 @@
+<launch>
+    <include file="$(find probabilistic_grasp_planner)/launch/probabilistic_grasp_planner_node_prereqs.launch"/>
+    <include file="$(find probabilistic_grasp_planner)/launch/probabilistic_grasp_planner_node.launch"/>
+</launch>
