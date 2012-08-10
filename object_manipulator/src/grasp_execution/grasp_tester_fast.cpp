@@ -130,7 +130,7 @@ namespace object_manipulator {
 
             marker.id = 0;
 
-            ROS_INFO("Displaying marker %d with ns %s", i, marker.ns.c_str());
+            ROS_DEBUG("Displaying marker %d with ns %s", i, marker.ns.c_str());
             vis_marker_publisher.publish(marker);
         }
     }
@@ -307,7 +307,7 @@ namespace object_manipulator {
         collision_space::EnvironmentModel::AllowedCollisionMatrix object_support_disable_acm = object_disable_acm;
         if(pickup_goal.allow_gripper_support_collision)
         {
-            ROS_INFO("Disabling collisions between gripper and support surface");
+            ROS_DEBUG("Disabling collisions between gripper and support surface");
             if(pickup_goal.collision_support_surface_name == "\"all\"")
             {
                 for(unsigned int i = 0; i < end_effector_links.size(); i++){
@@ -315,7 +315,7 @@ namespace object_manipulator {
                 }
             }
             else{
-                ROS_INFO("not all");
+                ROS_DEBUG("not all");
                 object_support_disable_acm.changeEntry(pickup_goal.collision_support_surface_name, end_effector_links, true);
             }
         }
@@ -407,7 +407,7 @@ namespace object_manipulator {
             state->updateKinematicStateWithLinkAt(handDescription().gripperFrame(pickup_goal.arm_name),grasp_poses[i]);
 
             if(cm->isKinematicStateInCollision(*state)) {
-                ROS_INFO_STREAM("Grasp in collision");
+                ROS_DEBUG_STREAM("Grasp in collision");
                 print_contacts(cm, state);
 
                 std_msgs::ColorRGBA col_pregrasp;
@@ -538,7 +538,7 @@ namespace object_manipulator {
                 arm_navigation_msgs::Constraints emp;
                 sensor_msgs::JointState solution;
                 arm_navigation_msgs::ArmNavigationErrorCodes error_code;
-                ROS_INFO_STREAM("X y z " << base_link_grasp_pose.pose.position.x << " "
+                ROS_DEBUG_STREAM("X y z " << base_link_grasp_pose.pose.position.x << " "
                                 << base_link_grasp_pose.pose.position.y << " "
                                 << base_link_grasp_pose.pose.position.z);
                 if(!ik_solver_map_[pickup_goal.arm_name]->findConstraintAwareSolution(base_link_grasp_pose.pose,
@@ -679,7 +679,7 @@ namespace object_manipulator {
                     outcome_count[GraspResult::LIFT_OUT_OF_REACH]++;
                     continue;
                 } else {
-                    ROS_INFO_STREAM("Everything successful");
+                    ROS_DEBUG_STREAM("Everything successful");
                     execution_info[i].result_.result_code = GraspResult::SUCCESS;
                     execution_info.resize(i+1);
                     outcome_count[GraspResult::SUCCESS]++;
@@ -883,7 +883,7 @@ namespace object_manipulator {
 
         visualize_grasps(pickup_goal, grasps, execution_info, vis_marker_publisher_);
 
-        ROS_INFO_STREAM("Took " << (ros::WallTime::now()-start).toSec());
+        ROS_DEBUG_STREAM("Took " << (ros::WallTime::now()-start).toSec());
 
         for(std::map<unsigned int, unsigned int>::iterator it = outcome_count.begin();
         it != outcome_count.end();
