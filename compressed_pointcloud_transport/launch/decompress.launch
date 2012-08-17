@@ -7,6 +7,6 @@
     
     <node pkg="compressed_pointcloud_transport" launch-prefix="$(arg debug_prefix)" name="cloud_decompressor" type="cloud_decompressor" respawn="false" output="screen">
       <remap from="input"  to="/compressed_cloud" />
-      <remap from="output" to="/camera/rgb/points2_compressed" />
+      <remap from="output" to="/head_mount_kinect/rgb/points2_compressed" />
     </node>
 </launch>     

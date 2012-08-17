@@ -44,20 +44,29 @@ import rospy
 from object_manipulation_msgs.srv import FindClusterBoundingBox, FindClusterBoundingBoxResponse, \
                    FindClusterBoundingBox2, FindClusterBoundingBox2Response
 import object_manipulator.cluster_bounding_box_finder as cluster_bounding_box_finder
+import object_manipulator.cluster_bounding_box_finder_3d as cluster_bounding_box_finder_3d
 import scipy
 from object_manipulator.convert_functions import *
+import tf
 
 ##class for the find cluster bounding box service
 class ClusterBoundingBoxFinderServer:
 
-    def __init__(self):
-        self.cbbf = cluster_bounding_box_finder.ClusterBoundingBoxFinder()
+    def __init__(self, tf_listener = None):
+        if tf_listener == None:
+            self.tf_listener = tf.TransformListener()
+        else:
+            self.tf_listener = tf_listener
+        self.cbbf = cluster_bounding_box_finder.ClusterBoundingBoxFinder(self.tf_listener)
+        self.cbbf3d = cluster_bounding_box_finder_3d.ClusterBoundingBoxFinder3D(self.tf_listener)
 
-        #service for PointCloud
-        s = rospy.Service('find_cluster_bounding_box', FindClusterBoundingBox, self.find_cluster_bounding_box_callback)
+        #services for PointCloud
+        rospy.Service('find_cluster_bounding_box', FindClusterBoundingBox, self.find_cluster_bounding_box_callback)
+        rospy.Service('find_cluster_bounding_box_3d', FindClusterBoundingBox, self.find_cluster_bounding_box_3d_callback)
 
-        #service for PointCloud2
-        s = rospy.Service('find_cluster_bounding_box2', FindClusterBoundingBox2, self.find_cluster_bounding_box2_callback)
+        #services for PointCloud2
+        rospy.Service('find_cluster_bounding_box2', FindClusterBoundingBox2, self.find_cluster_bounding_box2_callback)
+        rospy.Service('find_cluster_bounding_box2_3d', FindClusterBoundingBox2, self.find_cluster_bounding_box2_3d_callback)
 
         
     ##service callback for the find_cluster_bounding_box service
@@ -69,12 +78,26 @@ class ClusterBoundingBoxFinderServer:
 
     ##service callback for the find_cluster_bounding_box2 service
     def find_cluster_bounding_box2_callback(self, req):
-        rospy.loginfo("finding the bounding box for a point cluster")
+        rospy.loginfo("finding the bounding box for a PointCloud2 point cluster")
         (box_pose, box_dims, error) = self.find_cluster_bounding_box(req)
         return FindClusterBoundingBox2Response(box_pose, box_dims, error)
 
 
-    ##find the cluster bounding box
+    ##service callback for the find_cluster_bounding_box service
+    def find_cluster_bounding_box_3d_callback(self, req):
+        rospy.loginfo("finding the bounding box for a point cluster (3D)")
+        (box_pose, box_dims, error) = self.find_cluster_bounding_box_3d(req)
+        return FindClusterBoundingBoxResponse(box_pose, box_dims, error)
+
+
+    ##service callback for the find_cluster_bounding_box2 service
+    def find_cluster_bounding_box2_3d_callback(self, req):
+        rospy.loginfo("finding the bounding box for a PointCloud2 point cluster (3D)")
+        (box_pose, box_dims, error) = self.find_cluster_bounding_box_3d(req)
+        return FindClusterBoundingBox2Response(box_pose, box_dims, error)
+
+
+    ##find the cluster bounding box with the z-axis in the z-up-frame being fixed
     def find_cluster_bounding_box(self, req):
 
         #use PCA to find the object frame and bounding box dims
@@ -97,10 +120,31 @@ class ClusterBoundingBoxFinderServer:
         pose_stamped = stamp_pose(pose, self.cbbf.base_frame)
 
         #transform pose to cluster's frame_id
-        transformed_pose_stamped = change_pose_stamped_frame(self.cbbf.tf_listener, pose_stamped, req.cluster.header.frame_id)
+        transformed_pose_stamped = change_pose_stamped_frame(self.tf_listener, pose_stamped, req.cluster.header.frame_id)
 
         #rospy.loginfo("returning cluster bounding box response:"+str(pose_stamped)+str(object_bounding_box_dims))
         return (transformed_pose_stamped, Vector3(*object_bounding_box_dims), 0)
+
+
+    ##find the cluster bounding box without any special fixed axes
+    def find_cluster_bounding_box_3d(self, req):
+
+        #use PCA to find the object frame and bounding box dims
+        (object_points, object_bounding_box_dims, object_bounding_box, object_to_base_frame, object_to_cluster_frame) = \
+                           self.cbbf3d.find_object_frame_and_bounding_box(req.cluster)
+
+        #problem with finding bounding box
+        if object_points == None:
+            return (PoseStamped(), Vector3(0,0,0), 1)
+
+        center_mat = object_to_cluster_frame 
+
+        #convert frame to PoseStamped
+        pose = mat_to_pose(center_mat)
+        pose_stamped = stamp_pose(pose, req.cluster.header.frame_id)
+
+        #rospy.loginfo("returning cluster bounding box response:"+str(pose_stamped)+"\n"+str(object_bounding_box_dims))
+        return (pose_stamped, Vector3(*object_bounding_box_dims), 0)
 
 
 if __name__ == '__main__':
