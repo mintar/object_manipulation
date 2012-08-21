@@ -548,6 +548,7 @@ namespace object_manipulator {
                                                                                       error_code,
                                                                                       false)) {
                     ROS_DEBUG_STREAM_NAMED("manipulation", "Grasp out of reach");
+                    print_contacts(cm, state);
                     std_msgs::ColorRGBA col_pregrasp;
                     col_pregrasp.r = 0.0;
                     col_pregrasp.g = 1.0;
