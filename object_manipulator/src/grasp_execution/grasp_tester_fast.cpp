@@ -547,7 +547,7 @@ namespace object_manipulator {
                                                                                       solution,
                                                                                       error_code,
                                                                                       false)) {
-                    ROS_DEBUG_STREAM_NAMED("manipulation", "Grasp out of reach");
+                    ROS_DEBUG_STREAM_NAMED("manipulation", "IK for grasp failed");
                     print_contacts(cm, state);
                     std_msgs::ColorRGBA col_pregrasp;
                     col_pregrasp.r = 0.0;
