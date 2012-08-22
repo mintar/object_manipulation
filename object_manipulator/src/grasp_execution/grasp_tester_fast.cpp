@@ -48,20 +48,38 @@ using arm_navigation_msgs::ArmNavigationErrorCodes;
 
 namespace object_manipulator {
 
-    void  print_contacts(planning_environment::CollisionModels* cm, planning_models::KinematicState* state) {
-        std::vector<arm_navigation_msgs::ContactInformation> contacts;
-        cm->getAllCollisionsForState(*state, contacts,1);
-        if(contacts.size() == 0) {
-            ROS_WARN_STREAM("Collision reported but no contacts");
-        }
-        std::vector<std::string> names;
-        for(unsigned int j = 0; j < contacts.size(); j++) {
-            names.push_back(contacts[j].contact_body_1);
+  void  print_contacts(planning_environment::CollisionModels* cm, planning_models::KinematicState* state) {
+    std::vector<arm_navigation_msgs::ContactInformation> contacts;
+    cm->getAllCollisionsForState(*state, contacts,1);
 
-            ROS_DEBUG_STREAM_NAMED("manipulation", "Collision between " << contacts[j].contact_body_1
+    std::vector<std::string> names;
+    for(unsigned int j = 0; j < contacts.size(); j++) {
+      names.push_back(contacts[j].contact_body_1);
+      
+      ROS_DEBUG_STREAM_NAMED("manipulation", "Collision between " << contacts[j].contact_body_1
                              << " and " << contacts[j].contact_body_2);
-        }
     }
+  }
+
+  void visualize_end_effector_in_state(planning_environment::CollisionModels* cm,
+                                       planning_models::KinematicState* state, 
+                                       const std::vector<std::string> &end_effector_links,
+                                       const char *marker_name,
+                                       ros::Publisher &vis_marker_array_publisher) {
+    
+    std_msgs::ColorRGBA col;
+    col.r = 0.0;
+    col.g = 1.0;
+    col.b = 1.0;
+    col.a = 1.0;
+    visualization_msgs::MarkerArray arr;
+    cm->getRobotMarkersGivenState(*state, arr, col,
+                                  marker_name,
+                                  ros::Duration(0.0),
+                                  &end_effector_links);
+    vis_marker_array_publisher.publish(arr);
+
+  }
 
     void visualize_grasps(const object_manipulation_msgs::PickupGoal &pickup_goal,
                           const std::vector<object_manipulation_msgs::Grasp> &grasps,
@@ -405,22 +423,12 @@ namespace object_manipulator {
                 grasp_poses[i] = obj_pose*gp;
             }
             state->updateKinematicStateWithLinkAt(handDescription().gripperFrame(pickup_goal.arm_name),grasp_poses[i]);
+            visualize_end_effector_in_state(cm, state, end_effector_links, "grasp", vis_marker_array_publisher_);
+
 
             if(cm->isKinematicStateInCollision(*state)) {
                 ROS_DEBUG_STREAM("Grasp in collision");
                 print_contacts(cm, state);
-
-                std_msgs::ColorRGBA col_pregrasp;
-                col_pregrasp.r = 0.0;
-                col_pregrasp.g = 1.0;
-                col_pregrasp.b = 1.0;
-                col_pregrasp.a = 1.0;
-                visualization_msgs::MarkerArray arr;
-                cm->getRobotMarkersGivenState(*state, arr, col_pregrasp,
-                                              "grasp_in_collision",
-                                              ros::Duration(0.0),
-                                              &end_effector_links);
-                vis_marker_array_publisher_.publish(arr);
                 execution_info[i].result_.result_code = GraspResult::GRASP_IN_COLLISION;
                 outcome_count[GraspResult::GRASP_IN_COLLISION]++;
             } else {
@@ -472,22 +480,12 @@ namespace object_manipulator {
             tf::Transform pre_grasp_trans(tf::Quaternion(0,0,0,1.0), distance_pregrasp_dir);
             tf::Transform pre_grasp_pose = grasp_poses[i]*pre_grasp_trans;
             state->updateKinematicStateWithLinkAt(handDescription().gripperFrame(pickup_goal.arm_name),pre_grasp_pose);
+            visualize_end_effector_in_state(cm, state, end_effector_links, "pre_grasp", vis_marker_array_publisher_);
+
 
             if(cm->isKinematicStateInCollision(*state)) {
                 ROS_DEBUG_STREAM_NAMED("manipulation", "Pre-grasp in collision");
                 print_contacts(cm, state);
-
-                std_msgs::ColorRGBA col_pregrasp;
-                col_pregrasp.r = 1.0;
-                col_pregrasp.g = 0.0;
-                col_pregrasp.b = 1.0;
-                col_pregrasp.a = 1.0;
-                visualization_msgs::MarkerArray arr;
-                cm->getRobotMarkersGivenState(*state, arr, col_pregrasp,
-                                              "pre_grasp_in_collision",
-                                              ros::Duration(0.0),
-                                              &end_effector_links);
-                vis_marker_array_publisher_.publish(arr);
 
                 execution_info[i].result_.result_code = GraspResult::PREGRASP_IN_COLLISION;
                 outcome_count[GraspResult::PREGRASP_IN_COLLISION]++;
@@ -549,17 +547,6 @@ namespace object_manipulator {
                                                                                       false)) {
                     ROS_DEBUG_STREAM_NAMED("manipulation", "IK for grasp failed");
                     print_contacts(cm, state);
-                    std_msgs::ColorRGBA col_pregrasp;
-                    col_pregrasp.r = 0.0;
-                    col_pregrasp.g = 1.0;
-                    col_pregrasp.b = 1.0;
-                    col_pregrasp.a = 1.0;
-                    visualization_msgs::MarkerArray arr;
-                    cm->getRobotMarkersGivenState(*state, arr, col_pregrasp,
-                                                  "out_of_reach",
-                                                  ros::Duration(0.0),
-                                                  &end_effector_links);
-                    vis_marker_array_publisher_.publish(arr);
 
                     execution_info[i].result_.result_code = GraspResult::GRASP_OUT_OF_REACH;
                     outcome_count[GraspResult::GRASP_OUT_OF_REACH]++;
