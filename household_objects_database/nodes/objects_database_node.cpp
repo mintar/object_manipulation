@@ -174,12 +174,6 @@ private:
   //! Transform listener
   tf::TransformListener listener_;
 
-  //! Threshold for pruning grasps based on gripper opening
-  double prune_gripper_opening_;
-
-  //! Threshold for pruning grasps based on table clearance
-  double prune_table_clearance_;
-
   bool translateIdCB(TranslateRecognitionId::Request &request, TranslateRecognitionId::Response &response)
   {
     std::vector<boost::shared_ptr<DatabaseScaledModel> > models;
@@ -306,38 +300,6 @@ private:
     return true;
   }
 
-  //! Prune grasps that require gripper to be open all the way, or that are marked in db as colliding with table
-  /*! Use negative value for table_clearance_threshold if no clearing should be done
-    based on table clearance.
-  */
-  virtual void pruneGraspList(std::vector< boost::shared_ptr<DatabaseGrasp> > &grasps,
-			      double gripper_threshold, 
-			      double table_clearance_threshold)
-  {
-    std::vector< boost::shared_ptr<DatabaseGrasp> >::iterator prune_it = grasps.begin();
-    int pruned = 0;
-    while ( prune_it != grasps.end() )
-    {
-      //by mistake, table clearance in database is currently in mm
-      if ((*prune_it)->final_grasp_posture_.get().joint_angles_[0] > gripper_threshold ||
-	  (table_clearance_threshold >= 0.0 && (*prune_it)->table_clearance_.get() < table_clearance_threshold*1.0e3) ) 
-      {
-	if (gripper_threshold >= 0.0 && (*prune_it)->final_grasp_posture_.get().joint_angles_[0] > gripper_threshold)
-	    ROS_DEBUG("gripper_threshold: %.2f, joint_angles: %.2f, pruning grasp", 
-		      gripper_threshold, (*prune_it)->final_grasp_posture_.get().joint_angles_[0]);
-	else ROS_DEBUG("table_clearance_threshold: %.2f, table_clearance: %.2f, pruning grasp", 
-		       table_clearance_threshold,(*prune_it)->table_clearance_.get()); 
-	prune_it = grasps.erase(prune_it);
-	pruned++;
-      } 
-      else 
-      {
-	prune_it++;
-      }
-    }
-    ROS_INFO("Database grasp planner: pruned %d grasps for table collision or gripper angle above threshold", pruned);
-  }
-
   geometry_msgs::Pose multiplyPoses(const geometry_msgs::Pose &p1, 
                                     const geometry_msgs::Pose &p2)
   {
@@ -389,9 +351,6 @@ private:
     }
     ROS_INFO("Database object node: retrieved %u grasps from database", (unsigned int)db_grasps.size());
     
-    //prune the retrieved grasps
-    pruneGraspList(db_grasps, prune_gripper_opening_, prune_table_clearance_);
-
     //randomize the order of the grasps
     std::random_shuffle(db_grasps.begin(), db_grasps.end());
 
@@ -567,11 +526,6 @@ public:
       (root_nh_, GRASP_PLANNING_ACTION_NAME, 
        boost::bind(&ObjectsDatabaseNode::graspPlanningActionCB, this, _1), false);
     grasp_planning_server_->start();
-
-    priv_nh_.param<double>("prune_gripper_opening", prune_gripper_opening_, 0.5);
-    ROS_DEBUG("prune_gripper_opening value: %.2f", prune_gripper_opening_);
-    priv_nh_.param<double>("prune_table_clearance", prune_table_clearance_, 0.0);
-    ROS_DEBUG("prune_table_clearance value: %.2f", prune_table_clearance_);
   }
 
   ~ObjectsDatabaseNode()
