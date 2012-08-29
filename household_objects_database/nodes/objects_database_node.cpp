@@ -132,6 +132,13 @@ class HandDescription
   
 };
 
+bool compareGraspsByScaledQuality(const boost::shared_ptr<DatabaseGrasp> &grasp1, 
+                                  const boost::shared_ptr<DatabaseGrasp> &grasp2)
+{
+  if (grasp1->scaled_quality_.data() < grasp2->scaled_quality_.data()) return true;
+  return false;
+}
+
 //! Wraps around database connection to provide database-related services through ROS
 /*! Contains very thin wrappers for getting a list of scaled models and for getting the mesh
   of a model, as well as a complete server for the grasp planning service */
@@ -173,6 +180,10 @@ private:
 
   //! Transform listener
   tf::TransformListener listener_;
+
+  //! How to order grasps received from database.
+  /*! Possible values: "random" or "quality" */
+  std::string grasp_ordering_method_;
 
   bool translateIdCB(TranslateRecognitionId::Request &request, TranslateRecognitionId::Response &response)
   {
@@ -350,9 +361,21 @@ private:
       return false;
     }
     ROS_INFO("Database object node: retrieved %u grasps from database", (unsigned int)db_grasps.size());
-    
-    //randomize the order of the grasps
-    std::random_shuffle(db_grasps.begin(), db_grasps.end());
+
+    //order grasps based on request
+    if (grasp_ordering_method_ == "random") 
+    {
+      std::random_shuffle(db_grasps.begin(), db_grasps.end());
+    }
+    else if (grasp_ordering_method_ == "quality")
+    {
+      std::sort(db_grasps.begin(), db_grasps.end(), compareGraspsByScaledQuality);
+    }
+    else
+    {
+      ROS_WARN("Unknown grasp ordering method requested -- randomizing grasp order");
+      std::random_shuffle(db_grasps.begin(), db_grasps.end());
+    }
 
     //convert to the Grasp data type
     std::vector< boost::shared_ptr<DatabaseGrasp> >::iterator it;
@@ -521,6 +544,8 @@ public:
                                                &ObjectsDatabaseNode::saveScanCB, this);
     translate_id_srv_ = priv_nh_.advertiseService(TRANSLATE_ID_SERVICE_NAME, 
                                                   &ObjectsDatabaseNode::translateIdCB, this);
+
+    priv_nh_.param<std::string>("grasp_ordering_method", grasp_ordering_method_, "random");
 
     grasp_planning_server_ = new actionlib::SimpleActionServer<object_manipulation_msgs::GraspPlanningAction>
       (root_nh_, GRASP_PLANNING_ACTION_NAME, 
