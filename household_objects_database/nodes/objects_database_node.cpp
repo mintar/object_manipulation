@@ -132,10 +132,10 @@ class HandDescription
   
 };
 
-bool compareGraspsByScaledQuality(const boost::shared_ptr<DatabaseGrasp> &grasp1, 
-                                  const boost::shared_ptr<DatabaseGrasp> &grasp2)
+bool greaterScaledQuality(const boost::shared_ptr<DatabaseGrasp> &grasp1, 
+			  const boost::shared_ptr<DatabaseGrasp> &grasp2)
 {
-  if (grasp1->scaled_quality_.data() < grasp2->scaled_quality_.data()) return true;
+  if (grasp1->scaled_quality_.data() > grasp2->scaled_quality_.data()) return true;
   return false;
 }
 
@@ -365,11 +365,13 @@ private:
     //order grasps based on request
     if (grasp_ordering_method_ == "random") 
     {
+      ROS_INFO("Randomizing grasps");
       std::random_shuffle(db_grasps.begin(), db_grasps.end());
     }
     else if (grasp_ordering_method_ == "quality")
     {
-      std::sort(db_grasps.begin(), db_grasps.end(), compareGraspsByScaledQuality);
+      ROS_INFO("Sorting grasps by scaled quality");
+      std::sort(db_grasps.begin(), db_grasps.end(), greaterScaledQuality);
     }
     else
     {
