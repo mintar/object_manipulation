@@ -3,16 +3,22 @@
 # which arm to be used for grasping
 string arm_name
 
-# a list of possible transformations for placing the object (place_trans)
-# the final pose of the wrist for placement (place_wrist_pose) is as follows:
-# place_wrist_pose = place_trans * grasp_pose
-# the frame_id for wrist_trans is defined here, and 
-# should be the same for all place_locations
+# a list of possible transformations for placing the object
 geometry_msgs/PoseStamped[] place_locations
 
 # the grasp that has been executed on this object
-# (contains the grasp_pose referred to above)
 Grasp grasp
+
+# Note that, in general place_location is intended to show where you want the object
+# to go in the world, while grasp is meant to show how the object is grasped
+# (where the hand is relative to the object).
+
+# Ultimately, what matters is where the hand goes when you place the object; this
+# is computed internally by simply multiplying the two transforms above.
+
+# If you already know where you want the hand to go in the world when placing, feel
+# free to put that in the place_location, and make the transform in grasp equal to
+# identity.
 
 # how far the retreat should ideally be away from the place location
 float32 desired_retreat_distance
