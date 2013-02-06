@@ -97,10 +97,12 @@ ObjectManipulator::ObjectManipulator() :
   reactive_place_executor_ = new ReactivePlaceExecutor(marker_pub_);
 
   //new syle executors
+
+  priv_nh_.param<std::string>("kinematics_plugin_name", kinematics_plugin_name_, "pr2_arm_kinematics/PR2ArmKinematicsPlugin");
   
   grasp_tester_with_approach_ = new GraspTesterWithApproach;
   grasp_tester_with_approach_->setMarkerPublisher(marker_pub_);
-  grasp_tester_fast_ = new GraspTesterFast;
+  grasp_tester_fast_ = new GraspTesterFast(NULL, kinematics_plugin_name_);
   grasp_tester_fast_->setMarkerPublisher(marker_pub_);
   unsafe_grasp_tester_ = new UnsafeGraspTester;
   unsafe_grasp_tester_->setMarkerPublisher(marker_pub_);
@@ -111,7 +113,7 @@ ObjectManipulator::ObjectManipulator() :
   unsafe_grasp_performer_ = new UnsafeGraspPerformer;
   unsafe_grasp_performer_->setMarkerPublisher(marker_pub_);
  
-  standard_place_tester_ = new PlaceTesterFast;
+  standard_place_tester_ = new PlaceTesterFast(NULL, kinematics_plugin_name_);
   standard_place_tester_->setMarkerPublisher(marker_pub_);
   standard_place_performer_ = new StandardPlacePerformer;
   standard_place_performer_->setMarkerPublisher(marker_pub_);
