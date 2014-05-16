@@ -68,6 +68,11 @@ class ClusterBoundingBoxFinder:
         else:
             self.tf_broadcaster = tf_broadcaster
 
+        #get the name of the frame to use with z-axis being "up" or "normal to surface"
+        #(the cluster will be transformed to this frame, and the resulting box z will be this frame's z)
+        #if param is not set, assumes the point cloud's frame is such
+        self.base_frame = rospy.get_param("~z_up_frame", None)
+
 
     ##run eigenvector PCA for a 2xn scipy matrix, return the directions 
     #(list of 2x1 scipy arrays)
@@ -144,12 +149,14 @@ class ClusterBoundingBoxFinder:
         #get the name of the frame to use with z-axis being "up" or "normal to surface" 
         #(the cluster will be transformed to this frame, and the resulting box z will be this frame's z)
         #if param is not set, assumes the point cloud's frame is such
-        self.base_frame = rospy.get_param("~z_up_frame", point_cloud.header.frame_id)
+        base_frame = self.base_frame
+        if base_frame is None:
+            base_frame = point_cloud.header.frame_id
 
         #convert from PointCloud to 4xn scipy matrix in the base_frame
         cluster_frame = point_cloud.header.frame_id
 
-        (points, cluster_to_base_frame) = transform_point_cloud(self.tf_listener, point_cloud, self.base_frame)
+        (points, cluster_to_base_frame) = transform_point_cloud(self.tf_listener, point_cloud, base_frame)
         if points == None:
             return (None, None, None)
         #print "cluster_to_base_frame:\n", ppmat(cluster_to_base_frame)
