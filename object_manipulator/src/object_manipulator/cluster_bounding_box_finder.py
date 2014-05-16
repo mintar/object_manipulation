@@ -49,6 +49,7 @@ import scipy.linalg
 from geometry_msgs.msg import PoseStamped, Point, Pose, Vector3
 from object_manipulation_msgs.srv import FindClusterBoundingBox, FindClusterBoundingBoxResponse
 from convert_functions import *
+import threading
 
 ## class for using PCA to find the principal directions and bounding
 # box for a point cluster
@@ -68,6 +69,7 @@ class ClusterBoundingBoxFinder:
         else:
             self.tf_broadcaster = tf_broadcaster
 
+        self.lock = threading.Lock()
 
     ##run eigenvector PCA for a 2xn scipy matrix, return the directions 
     #(list of 2x1 scipy arrays)
@@ -140,78 +142,75 @@ class ClusterBoundingBoxFinder:
     #use the local rosparam z_up_frame to specify the desired frame to use where the z-axis is special (box z will be frame z)
     #if not specified, the point cloud's frame is assumed to be the desired z_up_frame
     def find_object_frame_and_bounding_box(self, point_cloud):
-        
-        #get the name of the frame to use with z-axis being "up" or "normal to surface" 
-        #(the cluster will be transformed to this frame, and the resulting box z will be this frame's z)
-        #if param is not set, assumes the point cloud's frame is such
-        self.base_frame = rospy.get_param("~z_up_frame", point_cloud.header.frame_id)
+        with self.lock:
+            #get the name of the frame to use with z-axis being "up" or "normal to surface"
+            #(the cluster will be transformed to this frame, and the resulting box z will be this frame's z)
+            #if param is not set, assumes the point cloud's frame is such
+            self.base_frame = rospy.get_param("~z_up_frame", point_cloud.header.frame_id)
 
-        #convert from PointCloud to 4xn scipy matrix in the base_frame
-        cluster_frame = point_cloud.header.frame_id
+            #convert from PointCloud to 4xn scipy matrix in the base_frame
+            cluster_frame = point_cloud.header.frame_id
 
-        (points, cluster_to_base_frame) = transform_point_cloud(self.tf_listener, point_cloud, self.base_frame)
-        if points == None:
-            return (None, None, None)
-        #print "cluster_to_base_frame:\n", ppmat(cluster_to_base_frame)
+            (points, cluster_to_base_frame) = transform_point_cloud(self.tf_listener, point_cloud, self.base_frame)
+            if points == None:
+                return (None, None, None)
+            #print "cluster_to_base_frame:\n", ppmat(cluster_to_base_frame)
 
-        #find the lowest point in the cluster to use as the 'table height'
-        table_height = points[2,:].min()
+            #find the lowest point in the cluster to use as the 'table height'
+            table_height = points[2,:].min()
 
-        #run PCA on the x-y dimensions to find the tabletop orientation of the cluster
-        (shifted_points, xy_mean) = self.mean_shift_xy(points)
-        directions = self.pca(shifted_points[0:2, :])
+            #run PCA on the x-y dimensions to find the tabletop orientation of the cluster
+            (shifted_points, xy_mean) = self.mean_shift_xy(points)
+            directions = self.pca(shifted_points[0:2, :])
 
-        #convert the points to object frame:
-        #rotate all the points about z so that the shortest direction is parallel to the y-axis (long side of object is parallel to x-axis) 
-        #and translate them so that the table height is z=0 (x and y are already centered around the object mean)
-        y_axis = scipy.mat([directions[1][0], directions[1][1], 0.])
-        z_axis = scipy.mat([0.,0.,1.])
-        x_axis = scipy.cross(y_axis, z_axis)
-        rotmat = scipy.matrix(scipy.identity(4))
-        rotmat[0:3, 0] = x_axis.T
-        rotmat[0:3, 1] = y_axis.T
-        rotmat[0:3, 2] = z_axis.T
-        rotmat[2, 3] = table_height
-        object_points = rotmat**-1 * shifted_points
+            #convert the points to object frame:
+            #rotate all the points about z so that the shortest direction is parallel to the y-axis (long side of object is parallel to x-axis)
+            #and translate them so that the table height is z=0 (x and y are already centered around the object mean)
+            y_axis = scipy.mat([directions[1][0], directions[1][1], 0.])
+            z_axis = scipy.mat([0.,0.,1.])
+            x_axis = scipy.cross(y_axis, z_axis)
+            rotmat = scipy.matrix(scipy.identity(4))
+            rotmat[0:3, 0] = x_axis.T
+            rotmat[0:3, 1] = y_axis.T
+            rotmat[0:3, 2] = z_axis.T
+            rotmat[2, 3] = table_height
+            object_points = rotmat**-1 * shifted_points
 
-        #remove outliers from the cluster
-        object_points = self.remove_outliers(object_points)
+            #remove outliers from the cluster
+            object_points = self.remove_outliers(object_points)
 
-        #find the object bounding box in the new object frame as [[xmin, ymin, zmin], [xmax, ymax, zmax]] (coordinates of opposite corners)
-        object_bounding_box = [[0]*3 for i in range(2)]
-        object_bounding_box_dims = [0]*3
-        for dim in range(3):
-            object_bounding_box[0][dim] = object_points[dim,:].min()
-            object_bounding_box[1][dim] = object_points[dim,:].max()
-            object_bounding_box_dims[dim] = object_bounding_box[1][dim] - object_bounding_box[0][dim]
+            #find the object bounding box in the new object frame as [[xmin, ymin, zmin], [xmax, ymax, zmax]] (coordinates of opposite corners)
+            object_bounding_box = [[0]*3 for i in range(2)]
+            object_bounding_box_dims = [0]*3
+            for dim in range(3):
+                object_bounding_box[0][dim] = object_points[dim,:].min()
+                object_bounding_box[1][dim] = object_points[dim,:].max()
+                object_bounding_box_dims[dim] = object_bounding_box[1][dim] - object_bounding_box[0][dim]
 
-        #now shift the object frame and bounding box so that the z-axis is centered at the middle of the bounding box
-        x_offset = object_bounding_box[1][0] - object_bounding_box_dims[0]/2.
-        y_offset = object_bounding_box[1][1] - object_bounding_box_dims[1]/2.
-        for i in range(2):
-            object_bounding_box[i][0] -= x_offset
-            object_bounding_box[i][1] -= y_offset
-        object_points[0, :] -= x_offset
-        object_points[1, :] -= y_offset
-        offset_mat = scipy.mat(scipy.identity(4))
-        offset_mat[0,3] = x_offset
-        offset_mat[1,3] = y_offset
-        rotmat = rotmat * offset_mat
-        #pdb.set_trace()
+            #now shift the object frame and bounding box so that the z-axis is centered at the middle of the bounding box
+            x_offset = object_bounding_box[1][0] - object_bounding_box_dims[0]/2.
+            y_offset = object_bounding_box[1][1] - object_bounding_box_dims[1]/2.
+            for i in range(2):
+                object_bounding_box[i][0] -= x_offset
+                object_bounding_box[i][1] -= y_offset
+            object_points[0, :] -= x_offset
+            object_points[1, :] -= y_offset
+            offset_mat = scipy.mat(scipy.identity(4))
+            offset_mat[0,3] = x_offset
+            offset_mat[1,3] = y_offset
+            rotmat = rotmat * offset_mat
+            #pdb.set_trace()
 
-        #record the transforms from object frame to base frame and to the original cluster frame,
-        #broadcast the object frame to tf, and draw the object frame in rviz
-        unshift_mean = scipy.identity(4)
-        unshift_mean[0,3] = xy_mean[0]
-        unshift_mean[1,3] = xy_mean[1]
-        object_to_base_frame = unshift_mean*rotmat
-        object_to_cluster_frame = cluster_to_base_frame**-1 * object_to_base_frame
+            #record the transforms from object frame to base frame and to the original cluster frame,
+            #broadcast the object frame to tf, and draw the object frame in rviz
+            unshift_mean = scipy.identity(4)
+            unshift_mean[0,3] = xy_mean[0]
+            unshift_mean[1,3] = xy_mean[1]
+            object_to_base_frame = unshift_mean*rotmat
+            object_to_cluster_frame = cluster_to_base_frame**-1 * object_to_base_frame
 
-        #broadcast the object frame to tf
-        (object_frame_pos, object_frame_quat) = mat_to_pos_and_quat(object_to_cluster_frame)
-        self.tf_broadcaster.sendTransform(object_frame_pos, object_frame_quat, rospy.Time.now(), "object_frame", cluster_frame) 
+            #broadcast the object frame to tf
+            (object_frame_pos, object_frame_quat) = mat_to_pos_and_quat(object_to_cluster_frame)
+            self.tf_broadcaster.sendTransform(object_frame_pos, object_frame_quat, rospy.Time.now(), "object_frame", cluster_frame)
 
-        return (object_points, object_bounding_box_dims, object_bounding_box, object_to_base_frame, object_to_cluster_frame)
-
-
-    
+            return (object_points, object_bounding_box_dims, object_bounding_box, object_to_base_frame, object_to_cluster_frame)
